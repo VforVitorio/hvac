@@ -17,29 +17,61 @@ Crea dos modelos (verano e invierno) que predicen el comportamiento de un sistem
 
 ## Instalación Rápida
 
+### Opción 1: Con GPU (Recomendado)
+
 ```bash
-# Instalar dependencias
+# Crear entorno conda
+conda create -n hvac_env python=3.10 -y
+conda activate hvac_env
+
+# Instalar PyTorch con CUDA
+conda install pytorch torchvision pytorch-cuda=11.8 -c pytorch -c nvidia
+
+# Instalar resto de dependencias
 pip install -r requirements.txt
 ```
 
+### Opción 2: Solo CPU
+
+```bash
+# Instalar todas las dependencias
+pip install -r requirements.txt
+```
+
+**Nota:** Para aprovechar GPU NVIDIA, sigue las instrucciones en `requirements.txt` para instalar PyTorch con CUDA.
+
 ---
 
-## Uso - Un Solo Notebook
+## Uso
 
-Todo el flujo está en un notebook único:
+### Ver Resultados (Sin Re-entrenar)
+
+El repositorio ya incluye:
+
+- ✅ Modelo entrenado en `models/`
+- ✅ Datos consolidados en `data/`
+- ✅ Gráficas de resultados en `results/`
+
+Solo abre el notebook para ver el análisis completo:
 
 ```bash
 jupyter notebook HVAC_Digital_Twin.ipynb
 ```
 
-El notebook incluye:
+### Re-entrenar desde Cero
+
+Ejecuta todas las celdas del notebook:
+
 1. ✅ Consolidación de datos (9 CSVs verano + 6 invierno)
 2. ✅ Descubrimiento de ecuaciones físicas (PySINDy)
 3. ✅ Creación del modelo híbrido TCN-VAE + SINDy
-4. ✅ Entrenamiento
+4. ✅ Entrenamiento (50 épocas)
 5. ✅ Evaluación y visualización de resultados
 
-**Tiempo estimado:** 20-30 minutos de ejecución completa
+**Tiempo estimado:**
+
+- Con GPU: ~10-15 minutos
+- Con CPU: ~30-40 minutos
 
 ---
 
@@ -58,10 +90,19 @@ hvac/
 ├── requirements.txt             # Dependencias
 └── README.md                    # Este archivo
 
-Generados automáticamente al ejecutar:
+Generados (ya incluidos en el repo):
 ├── data/                         # Datos consolidados
+│   ├── hvac_summer_consolidated.csv
+│   └── hvac_winter_consolidated.csv
 ├── models/                       # Modelos entrenados
-└── results/                      # Gráficos y resultados
+│   ├── hvac_hybrid_model.pt     # Modelo híbrido (3 MB)
+│   ├── scalers.pkl              # Escaladores para normalización
+│   ├── summer_equations.txt     # Ecuaciones PySINDy
+│   └── summer_coefficients.png  # Visualización coeficientes
+└── results/                      # Gráficos de resultados
+    ├── exploracion_datos.png    # Análisis exploratorio
+    ├── training_history.png     # Curvas de entrenamiento
+    └── predicciones.png         # Comparación predicciones vs reales
 ```
 
 ---
@@ -69,27 +110,30 @@ Generados automáticamente al ejecutar:
 ## Archivos Clave
 
 ### Notebook Principal
+
 **`HVAC_Digital_Twin.ipynb`** - Todo el flujo completo con explicaciones
 
 ### Módulos Python (en `src/`)
 
-| Archivo | Qué hace |
-|---------|----------|
-| `src/data_consolidation.py` | Junta los 15 CSVs en 2 datasets (verano/invierno) |
-| `src/physics_discovery.py` | Descubre ecuaciones con PySINDy |
-| `src/tcn_vae.py` | Implementa TCN-VAE (red temporal variacional) |
-| `src/hybrid_sindy_tcnvae.py` | Modelo híbrido que fusiona física + ML |
+| Archivo                      | Qué hace                                          |
+| ---------------------------- | ------------------------------------------------- |
+| `src/data_consolidation.py`  | Junta los 15 CSVs en 2 datasets (verano/invierno) |
+| `src/physics_discovery.py`   | Descubre ecuaciones con PySINDy                   |
+| `src/tcn_vae.py`             | Implementa TCN-VAE (red temporal variacional)     |
+| `src/hybrid_sindy_tcnvae.py` | Modelo híbrido que fusiona física + ML            |
 
 ---
 
 ## Datos
 
 ### Entrada
+
 - **9 experimentos de verano** (~51,000 registros)
 - **6 experimentos de invierno** (~14,000 registros)
 - **44 variables** por experimento (temperaturas, flujos, presiones, etc.)
 
 ### Variables Principales
+
 - `UCAOT` - Temperatura salida aire (principal variable de control)
 - `UCAOH` - Humedad salida
 - `UCWF` - Flujo de agua
@@ -97,16 +141,21 @@ Generados automáticamente al ejecutar:
 
 ---
 
-## Resultados Esperados
+## Resultados Obtenidos
 
-### Métricas Típicas
+### Métricas del Modelo Entrenado
+
 ```
-UCAOT (Temp. Salida):  R² > 0.90
-UCAOH (Humedad):       R² > 0.85
-CPMEP (Potencia):      R² > 0.88
+UCAOT (Temp. Salida):  R² > 0.97
+UCAOH (Humedad):       R² > 0.95
+UCWOT (Temp. Agua):    R² > 0.96
+CPMEP (Potencia):      R² > 0.95
 ```
+
+**Estado:** Modelo ya entrenado disponible en `models/hvac_hybrid_model.pt`
 
 ### Ventajas del Modelo Híbrido vs Solo ML
+
 - ✅ Más preciso
 - ✅ Generaliza mejor
 - ✅ Ecuaciones físicas interpretables
@@ -118,40 +167,64 @@ CPMEP (Potencia):      R² > 0.88
 
 En el notebook puedes ajustar:
 
-```python
+````python
 config = HybridConfig(
-    latent_dim=32,                  # Dimensión latente VAE
-    encoder_channels=[32, 64, 128], # Capas TCN
-    physics_weight=0.3,             # Peso física (0-1)
-    learning_rate=1e-3
-)
-```
+## Uso del Modelo Entrenado
 
-**Valores recomendados:**
-- `physics_weight=0.3` - Balance equilibrado
-- `physics_weight=0.5` - Más física, más robusto
-- `physics_weight=0.1` - Más datos, más flexible
+Para usar el modelo ya entrenado en tus propias aplicaciones:
 
----
+```python
+import torch
+import joblib
+
+# Cargar modelo
+model = torch.load('models/hvac_hybrid_model.pt')
+model.eval()
+
+# Cargar escaladores
+scalers = joblib.load('models/scalers.pkl')
+X_scaler = scalers['X_scaler']
+y_scaler = scalers['y_scaler']
+
+# Hacer predicciones
+# (tu código aquí con inputs normalizados)
+````
 
 ## Solución de Problemas
 
+### CUDA no disponible
+
+Verifica que tienes:
+
+1. GPU NVIDIA compatible
+2. Drivers NVIDIA actualizados
+3. PyTorch con CUDA: `conda install pytorch pytorch-cuda=11.8 -c pytorch -c nvidia`
+
 ### Error: "CUDA out of memory"
+
 ```python
-# Usar CPU en vez de GPU
-device = 'cpu'
+# Reducir batch size en el notebook
+train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True)
+val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False)
 ```
 
-### Entrenamiento muy lento
-```python
+### Entrenamiento muy lento (CPU)
+
+````python
 # Reducir épocas
+EPOCHS = 30  # en vez de 50
+
+# O usar menos datos
+summer_sample = summer_df.sample(n=5000)
+```educir épocas
 EPOCHS = 30  # en vez de 50-100
 
 # O usar menos datos
 summer_sample = summer_df.sample(n=10000)
-```
+````
 
 ### Malos resultados
+
 ```python
 # Aumentar épocas
 EPOCHS = 100
