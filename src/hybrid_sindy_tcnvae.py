@@ -10,7 +10,7 @@ import numpy as np
 from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass
 
-from tcn_vae import TCNVAE, TCNVAEPredictor, vae_loss_function
+from .tcn_vae import TCNVAE, TCNVAEPredictor, vae_loss_function
 
 
 @dataclass
@@ -60,26 +60,32 @@ class PhysicsInformedLayer(nn.Module):
         Returns:
             Physics-constrained predictions
         """
-        constrained = predictions.clone()
-
         if output_format == '3d':  # (batch, channels, sequence)
-            # Temperature constraints (channels 0-3: -10°C to 50°C)
-            constrained[:, :4, :] = torch.clamp(constrained[:, :4, :], min=-10, max=50)
-            # Humidity constraints (channel 4: 0% to 100%)
-            if constrained.shape[1] > 4:
-                constrained[:, 4, :] = torch.clamp(constrained[:, 4, :], min=0, max=100)
-            # Power constraints (channel 5: >= 0)
-            if constrained.shape[1] > 5:
-                constrained[:, 5, :] = torch.clamp(constrained[:, 5, :], min=0)
+            # Build list of constrained channels
+            channels = []
+            for i in range(predictions.shape[1]):
+                if i < 4:  # Temperature constraints: -10°C to 50°C
+                    channels.append(torch.clamp(predictions[:, i:i+1, :], min=-10, max=50))
+                elif i == 4:  # Humidity constraints: 0% to 100%
+                    channels.append(torch.clamp(predictions[:, i:i+1, :], min=0, max=100))
+                elif i == 5:  # Power constraints: >= 0
+                    channels.append(torch.clamp(predictions[:, i:i+1, :], min=0))
+                else:
+                    channels.append(predictions[:, i:i+1, :])
+            constrained = torch.cat(channels, dim=1)
         else:  # 2d format (batch, features)
-            # Temperature constraints
-            constrained[:, :4] = torch.clamp(constrained[:, :4], min=-10, max=50)
-            # Humidity constraints
-            if constrained.shape[1] > 4:
-                constrained[:, 4] = torch.clamp(constrained[:, 4], min=0, max=100)
-            # Power constraints
-            if constrained.shape[1] > 5:
-                constrained[:, 5] = torch.clamp(constrained[:, 5], min=0)
+            # Build list of constrained features
+            features = []
+            for i in range(predictions.shape[1]):
+                if i < 4:  # Temperature constraints: -10°C to 50°C
+                    features.append(torch.clamp(predictions[:, i:i+1], min=-10, max=50))
+                elif i == 4:  # Humidity constraints: 0% to 100%
+                    features.append(torch.clamp(predictions[:, i:i+1], min=0, max=100))
+                elif i == 5:  # Power constraints: >= 0
+                    features.append(torch.clamp(predictions[:, i:i+1], min=0))
+                else:
+                    features.append(predictions[:, i:i+1])
+            constrained = torch.cat(features, dim=1)
 
         return constrained
 
@@ -184,14 +190,14 @@ class HybridSINDyTCNVAE(nn.Module):
         )
 
         # Data-driven component (TCN-VAE)
+        # Note: output_dim is not specified, so TCNVAE will use input_dim for reconstruction
         self.tcn_vae = TCNVAE(
             input_dim=config.input_dim,
             latent_dim=config.latent_dim,
             encoder_channels=config.encoder_channels,
             decoder_channels=config.decoder_channels,
             kernel_size=config.tcn_kernel_size,
-            dropout=config.tcn_dropout,
-            output_dim=config.output_dim
+            dropout=config.tcn_dropout
         )
 
         # Predictor from TCN-VAE latent space
@@ -317,8 +323,7 @@ class HybridModelTrainer:
             self.optimizer,
             mode='min',
             factor=0.5,
-            patience=10,
-            verbose=True
+            patience=10
         )
 
         self.mse_loss = nn.MSELoss()

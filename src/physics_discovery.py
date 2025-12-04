@@ -89,12 +89,11 @@ class HVACPhysicsDiscovery:
         # Create SINDy model
         model = ps.SINDy(
             optimizer=optimizer,
-            feature_library=library,
-            feature_names=feature_names
+            feature_library=library
         )
 
         # Fit the model
-        model.fit(X, t=1.0, x_dot=X_dot)
+        model.fit(X, t=1.0, x_dot=X_dot, feature_names=feature_names)
 
         self.model = model
         self.feature_names = feature_names
