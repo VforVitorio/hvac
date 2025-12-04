@@ -1,7 +1,8 @@
 # Core dependencies for HVAC Digital Twin - Hybrid PINN
 # Python >= 3.8 required
 
-# Deep Learning
+# Deep Learning (CUDA 11.8 - cambia cu118 por cu121 si tienes CUDA 12.1)
+# Para instalar con CUDA: pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
 torch>=2.0.0
 torchvision>=0.15.0
 
