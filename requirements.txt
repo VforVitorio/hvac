@@ -1,10 +1,27 @@
 # Core dependencies for HVAC Digital Twin - Hybrid PINN
 # Python >= 3.8 required
 
-# Deep Learning (CUDA 11.8 - cambia cu118 por cu121 si tienes CUDA 12.1)
-# Para instalar con CUDA: pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
-torch>=2.0.0
-torchvision>=0.15.0
+# ============================================================================
+# PyTorch - IMPORTANTE: Instalación según GPU
+# ============================================================================
+#
+# OPCIÓN A: RTX 5000 Series (5060, 5070, 5080, 5090) - Requiere PyTorch 2.7+
+# Arquitectura Blackwell (sm_120) requiere CUDA 12.8+
+# PyTorch 2.7+ (estable, lanzado abril 2025) tiene soporte para Blackwell
+#
+# Ejecutar MANUALMENTE (NO con requirements.txt):
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
+#
+# NOTA: No especificar versión exacta de torchvision - Windows no tiene todos los builds
+#
+# OPCIÓN B: RTX 3000/4000 Series o anterior
+# Ejecutar MANUALMENTE:
+#   pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
+#
+# OPCIÓN C: Solo CPU (fallback si hay problemas)
+# Descomentar las siguientes líneas:
+# torch>=2.7.0
+# torchvision>=0.17.0
 
 # Physics-Informed Learning
 pysindy>=1.7.5
